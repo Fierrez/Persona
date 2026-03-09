@@ -73,19 +73,30 @@ class _RecoveryCodesPageState extends State<RecoveryCodesPage> {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text("Import ${rawCodes.length} Codes"),
           content: TextField(
             controller: nameController,
-            decoration: const InputDecoration(labelText: "Service Name (e.g. GitHub)"),
+            decoration: const InputDecoration(
+              labelText: "Service Name (e.g. GitHub)",
+              hintText: "Enter service name",
+            ),
           ),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false), 
+              child: const Text("Cancel")
+            ),
             ElevatedButton(
               onPressed: () {
                 if (nameController.text.isNotEmpty) {
                   Navigator.pop(context, true);
                 }
               }, 
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
               child: const Text("Import")
             ),
           ],
@@ -119,22 +130,30 @@ class _RecoveryCodesPageState extends State<RecoveryCodesPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text("Paste Recovery Codes"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Paste multiple codes separated by spaces or new lines."),
-            const SizedBox(height: 12),
+            const Text("Paste multiple codes separated by spaces or new lines.", style: TextStyle(fontSize: 14, color: Colors.grey)),
+            const SizedBox(height: 16),
             TextField(
               controller: pasteController,
               maxLines: 8,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: "Paste codes here...",
-                border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.grey.withOpacity(0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
           ],
         ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
@@ -143,6 +162,9 @@ class _RecoveryCodesPageState extends State<RecoveryCodesPage> {
               Navigator.pop(context);
               _processBulkCodes(content);
             },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             child: const Text("Next"),
           ),
         ],
@@ -179,16 +201,28 @@ class _RecoveryCodesPageState extends State<RecoveryCodesPage> {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Security Warning"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red),
+            SizedBox(width: 8),
+            Text("Security Warning"),
+          ],
+        ),
         content: const Text(
           "You are about to export your recovery codes to an unencrypted CSV file.\n\n"
           "Anyone with access to this file can read your codes. "
           "Are you sure you want to continue?",
         ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red, 
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text("Export Unsafe"),
           ),
@@ -230,6 +264,7 @@ class _RecoveryCodesPageState extends State<RecoveryCodesPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text("Add Recovery Code"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -238,15 +273,23 @@ class _RecoveryCodesPageState extends State<RecoveryCodesPage> {
               controller: _serviceController,
               decoration: const InputDecoration(labelText: "Service Name (e.g. GitHub)"),
             ),
+            const SizedBox(height: 8),
             TextField(
               controller: _codeController,
               decoration: const InputDecoration(labelText: "Recovery Code"),
             ),
           ],
         ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-          ElevatedButton(onPressed: _addCode, child: const Text("Add")),
+          ElevatedButton(
+            onPressed: _addCode, 
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text("Add")
+          ),
         ],
       ),
     );
@@ -254,69 +297,102 @@ class _RecoveryCodesPageState extends State<RecoveryCodesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      body: ListView.builder(
-        itemCount: _codes.length,
-        itemBuilder: (context, index) {
-          final code = _codes[index];
-          return Dismissible(
-            key: Key(code.id),
-            onDismissed: (_) => _deleteCode(index),
-            background: Container(
-              color: Colors.red, 
-              alignment: Alignment.centerRight, 
-              padding: const EdgeInsets.only(right: 20), 
-              child: const Icon(Icons.delete, color: Colors.white)
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: _codes.isEmpty 
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.vpn_key_outlined, size: 80, color: Colors.grey.withOpacity(0.3)),
+                const SizedBox(height: 16),
+                const Text("No recovery codes saved", style: TextStyle(color: Colors.grey, fontSize: 16)),
+              ],
             ),
-            child: ListTile(
-              title: Text(code.serviceName),
-              subtitle: Text(code.code, style: TextStyle(
-                decoration: code.used ? TextDecoration.lineThrough : null,
-                fontFamily: 'monospace',
-              )),
-              trailing: Checkbox(
-                value: code.used,
-                onChanged: (_) => _toggleUsed(index),
-              ),
+          )
+        : ListView.builder(
+            padding: const EdgeInsets.only(bottom: 120),
+            itemCount: _codes.length,
+            itemBuilder: (context, index) {
+              final code = _codes[index];
+              return Dismissible(
+                key: Key(code.id),
+                onDismissed: (_) => _deleteCode(index),
+                background: Container(
+                  color: Colors.red, 
+                  alignment: Alignment.centerRight, 
+                  padding: const EdgeInsets.only(right: 20), 
+                  child: const Icon(Icons.delete, color: Colors.white)
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  title: Text(code.serviceName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface)),
+                  subtitle: Text(code.code, style: TextStyle(
+                    decoration: code.used ? TextDecoration.lineThrough : null,
+                    fontFamily: 'monospace',
+                    color: code.used ? Colors.grey : theme.colorScheme.onSurface.withOpacity(0.7),
+                    fontSize: 14,
+                  )),
+                  trailing: Checkbox(
+                    value: code.used,
+                    onChanged: (_) => _toggleUsed(index),
+                    activeColor: theme.colorScheme.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  ),
+                ),
+              );
+            },
+          ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 90, right: 10),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _buildFabMini(Icons.download, _exportToCSV, "Export", "export_csv", theme),
+            const SizedBox(height: 12),
+            _buildFabMini(Icons.file_upload, _importFromTxt, "Import File", "import_txt", theme),
+            const SizedBox(height: 12),
+            _buildFabMini(Icons.content_paste, _showPasteDialog, "Paste Bulk", "paste_bulk", theme),
+            const SizedBox(height: 16),
+            FloatingActionButton.extended(
+              heroTag: "add_code",
+              onPressed: _showAddDialog,
+              icon: const Icon(Icons.add),
+              label: const Text("Add Code"),
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white,
             ),
-          );
-        },
+          ],
+        ),
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            heroTag: "export_csv",
-            onPressed: _exportToCSV,
-            mini: true,
-            tooltip: "Export CSV",
-            child: const Icon(Icons.download),
+    );
+  }
+
+  Widget _buildFabMini(IconData icon, VoidCallback onPressed, String label, String heroTag, ThemeData theme) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: theme.cardTheme.color,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))],
           ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            heroTag: "import_txt",
-            onPressed: _importFromTxt,
-            mini: true,
-            tooltip: "Import File",
-            child: const Icon(Icons.file_upload),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            heroTag: "paste_bulk",
-            onPressed: _showPasteDialog,
-            mini: true,
-            tooltip: "Paste Bulk Codes",
-            child: const Icon(Icons.content_paste),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            heroTag: "add_code",
-            onPressed: _showAddDialog,
-            tooltip: "Add Single Code",
-            child: const Icon(Icons.add),
-          ),
-        ],
-      ),
+          child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+        ),
+        const SizedBox(width: 8),
+        FloatingActionButton(
+          heroTag: heroTag,
+          onPressed: onPressed,
+          mini: true,
+          backgroundColor: theme.cardTheme.color,
+          foregroundColor: theme.colorScheme.primary,
+          child: Icon(icon),
+        ),
+      ],
     );
   }
 }

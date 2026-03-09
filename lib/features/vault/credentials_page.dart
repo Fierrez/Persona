@@ -22,20 +22,40 @@ class CredentialsPage extends StatefulWidget {
 class _CredentialsPageState extends State<CredentialsPage> {
   final SecureStorageService _storage = SecureStorageService();
   List<VaultEntry> _entries = [];
+  List<VaultEntry> _filteredEntries = [];
   final _uuid = const Uuid();
-  final bool _showPasswords = false;
-  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadEntries();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredEntries = _entries.where((e) => 
+        e.serviceName.toLowerCase().contains(query) || 
+        e.username.toLowerCase().contains(query)
+      ).toList();
+    });
   }
 
   Future<void> _loadEntries() async {
     final data = await _storage.readList("vault_credentials");
+    final loaded = data.map((item) => VaultEntry.fromJson(item)).toList();
     setState(() {
-      _entries = data.map((item) => VaultEntry.fromJson(item)).toList();
+      _entries = loaded;
+      _filteredEntries = loaded;
     });
   }
 
@@ -53,13 +73,7 @@ class _CredentialsPageState extends State<CredentialsPage> {
     );
     setState(() {
       _entries.add(newEntry);
-    });
-    await _saveEntries();
-  }
-
-  Future<void> _deleteEntry(int index) async {
-    setState(() {
-      _entries.removeAt(index);
+      _onSearchChanged(); // Refresh filtered list
     });
     await _saveEntries();
   }
@@ -70,6 +84,7 @@ class _CredentialsPageState extends State<CredentialsPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: [
               Icon(BrandIcons.getIcon(entry.serviceName), color: BrandIcons.getBrandColor(entry.serviceName)),
@@ -100,19 +115,13 @@ class _CredentialsPageState extends State<CredentialsPage> {
                     icon: const Icon(Icons.copy),
                     onPressed: () {
                       ClipboardService.copyWithAutoClear(entry.password);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password copied (clears in 30s)")));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password copied")));
                     },
                   ),
                 ],
               ),
               const SizedBox(height: 4),
               _buildStrengthIndicator(entry.password),
-              const SizedBox(height: 12),
-              _infoRow("Category", entry.category),
-              if (entry.notes.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                _infoRow("Notes", entry.notes),
-              ],
             ],
           ),
           actions: [
@@ -125,22 +134,12 @@ class _CredentialsPageState extends State<CredentialsPage> {
 
   Widget _buildStrengthIndicator(String password) {
     double strength = PasswordGenerator.checkStrength(password);
-    Color color = Colors.red;
-    String label = "Weak";
-    if (strength > 0.4) { color = Colors.orange; label = "Fair"; }
-    if (strength > 0.7) { color = Colors.green; label = "Strong"; }
-    
+    Color color = strength > 0.7 ? Colors.green : (strength > 0.4 ? Colors.orange : Colors.red);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LinearProgressIndicator(
-          value: strength,
-          backgroundColor: Colors.grey.withOpacity(0.2),
-          valueColor: AlwaysStoppedAnimation<Color>(color),
-          minHeight: 4,
-        ),
-        const SizedBox(height: 4),
-        Text("Strength: $label", style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
+        LinearProgressIndicator(value: strength, backgroundColor: color.withOpacity(0.1), valueColor: AlwaysStoppedAnimation(color)),
+        Text("Strength: ${strength > 0.7 ? 'Strong' : (strength > 0.4 ? 'Fair' : 'Weak')}", style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -153,13 +152,7 @@ class _CredentialsPageState extends State<CredentialsPage> {
         Row(
           children: [
             Expanded(child: Text(value, style: const TextStyle(fontSize: 16))),
-            IconButton(
-              icon: const Icon(Icons.copy, size: 20),
-              onPressed: () {
-                ClipboardService.copyWithAutoClear(value);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("$label copied (clears in 30s)")));
-              },
-            ),
+            IconButton(icon: const Icon(Icons.copy, size: 20), onPressed: () => ClipboardService.copyWithAutoClear(value)),
           ],
         ),
       ],
@@ -170,182 +163,118 @@ class _CredentialsPageState extends State<CredentialsPage> {
     final serviceController = TextEditingController();
     final userController = TextEditingController();
     final passController = TextEditingController();
-    String selectedCategory = 'General';
-    bool obscure = true;
-
+    String category = 'General';
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text("Add Credential"),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: serviceController, decoration: const InputDecoration(labelText: "Service (e.g. Google)")),
-                TextField(controller: userController, decoration: const InputDecoration(labelText: "Username/Email")),
-                TextField(
-                  controller: passController,
-                  decoration: InputDecoration(
-                    labelText: "Password",
-                    suffixIcon: IconButton(
-                      icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
-                      onPressed: () => setDialogState(() => obscure = !obscure),
-                    ),
-                  ),
-                  obscureText: obscure,
-                  onChanged: (val) => setDialogState(() {}),
-                ),
-                const SizedBox(height: 8),
-                _buildStrengthIndicator(passController.text),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedCategory,
-                  decoration: const InputDecoration(labelText: "Category"),
-                  items: ['General', 'Work', 'Social', 'Finance', 'Shopping'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                  onChanged: (val) => setDialogState(() => selectedCategory = val!),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-            ElevatedButton(
-              onPressed: () {
-                if (serviceController.text.isNotEmpty && passController.text.isNotEmpty) {
-                  _addEntry(serviceController.text, userController.text, passController.text, selectedCategory);
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Save"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _exportToCSV() async {
-    if (_entries.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No credentials to export")));
-      return;
-    }
-
-    final bool? confirm = await showDialog<bool>(
-      context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Security Warning"),
-        content: const Text("Unencrypted CSV export. Continue?"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("Add Credential"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: serviceController, decoration: const InputDecoration(labelText: "Service")),
+              TextField(controller: userController, decoration: const InputDecoration(labelText: "Username")),
+              TextField(controller: passController, decoration: const InputDecoration(labelText: "Password"), obscureText: true),
+            ],
+          ),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text("Export Unsafe")),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () {
+              _addEntry(serviceController.text, userController.text, passController.text, category);
+              Navigator.pop(context);
+            },
+            child: const Text("Save"),
+          ),
         ],
       ),
     );
-
-    if (confirm != true) return;
-
-    try {
-      List<List<dynamic>> rows = [["Service", "Username", "Password", "Category", "Notes"]];
-      for (var entry in _entries) {
-        rows.add([entry.serviceName, entry.username, entry.password, entry.category, entry.notes]);
-      }
-      String csv = const ListToCsvConverter().convert(rows);
-      final directory = await getTemporaryDirectory();
-      final file = File("${directory.path}/credentials_export.csv");
-      await file.writeAsString(csv);
-      await Share.shareXFiles([XFile(file.path)], text: 'Persona Credentials Export');
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Export failed: $e")));
-    }
-  }
-
-  Future<void> _importCredentials() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.any, withData: true);
-      if (result != null && result.files.single.bytes != null) {
-        final content = utf8.decode(result.files.single.bytes!);
-        List<List<dynamic>> rows = const CsvToListConverter().convert(content);
-        if (rows.isEmpty) return;
-        
-        for (int i = 1; i < rows.length; i++) {
-          if (rows[i].length >= 3) {
-            _entries.add(VaultEntry(
-              id: _uuid.v4(),
-              serviceName: rows[i][0].toString(),
-              username: rows[i][1].toString(),
-              password: rows[i][2].toString(),
-              category: rows[i].length > 3 ? rows[i][3].toString() : 'General',
-            ));
-          }
-        }
-        await _saveEntries();
-        setState(() {});
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Import failed: $e")));
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final filteredEntries = _entries.where((e) => 
-      e.serviceName.toLowerCase().contains(_searchQuery.toLowerCase()) || 
-      e.username.toLowerCase().contains(_searchQuery.toLowerCase())
-    ).toList();
-
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(60),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: TextField(
-            onChanged: (val) => setState(() => _searchQuery = val),
-            decoration: InputDecoration(
-              hintText: "Search credentials...",
-              prefixIcon: const Icon(Icons.search),
-              contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
-              filled: true,
-              fillColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: _searchController,
+              style: TextStyle(color: theme.colorScheme.onSurface),
+              decoration: InputDecoration(
+                hintText: "Search...",
+                hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                filled: true,
+                fillColor: theme.cardTheme.color,
+              ),
             ),
           ),
-        ),
-      ),
-      body: ListView.builder(
-        itemCount: filteredEntries.length,
-        itemBuilder: (context, index) {
-          final entry = filteredEntries[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: ListTile(
-              onTap: () => _showDetailsDialog(entry),
-              leading: CircleAvatar(
-                backgroundColor: BrandIcons.getBrandColor(entry.serviceName).withOpacity(0.1),
-                child: Icon(BrandIcons.getIcon(entry.serviceName), color: BrandIcons.getBrandColor(entry.serviceName), size: 20),
-              ),
-              title: Text(entry.serviceName, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text(entry.username),
-              trailing: IconButton(
-                icon: const Icon(Icons.copy_rounded, size: 20),
-                onPressed: () {
-                  ClipboardService.copyWithAutoClear(entry.password);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password copied")));
-                },
-              ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.only(bottom: 120),
+              itemCount: _filteredEntries.length,
+              itemBuilder: (context, index) {
+                final entry = _filteredEntries[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  color: theme.cardTheme.color,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.05)),
+                  ),
+                  child: ListTile(
+                    onTap: () => _showDetailsDialog(entry),
+                    leading: CircleAvatar(
+                      backgroundColor: BrandIcons.getBrandColor(entry.serviceName).withOpacity(0.1),
+                      child: Icon(BrandIcons.getIcon(entry.serviceName), color: BrandIcons.getBrandColor(entry.serviceName), size: 20),
+                    ),
+                    title: Text(entry.serviceName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(entry.username, style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
+                    trailing: IconButton(
+                      icon: Icon(Icons.copy_rounded, size: 20, color: theme.colorScheme.primary),
+                      onPressed: () {
+                        ClipboardService.copyWithAutoClear(entry.password);
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password copied")));
+                      },
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(heroTag: "import", onPressed: _importCredentials, mini: true, child: const Icon(Icons.upload_file)),
-          const SizedBox(height: 8),
-          FloatingActionButton(heroTag: "export", onPressed: _exportToCSV, mini: true, child: const Icon(Icons.download)),
-          const SizedBox(height: 8),
-          FloatingActionButton(heroTag: "add", onPressed: _showAddDialog, child: const Icon(Icons.add)),
+          ),
         ],
+      ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 90),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            FloatingActionButton(
+              heroTag: "import_c", 
+              onPressed: () {}, 
+              mini: true, 
+              backgroundColor: theme.cardTheme.color,
+              foregroundColor: theme.colorScheme.primary,
+              child: const Icon(Icons.upload_file),
+            ),
+            const SizedBox(height: 10),
+            FloatingActionButton(
+              heroTag: "add_c", 
+              onPressed: _showAddDialog, 
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.add),
+            ),
+          ],
+        ),
       ),
     );
   }

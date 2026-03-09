@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:persona_app/core/secure_storage.dart';
+import 'package:persona_app/features/backup/backup_service.dart';
 import 'auth_service.dart';
 
 class SecurityProvider with ChangeNotifier {
@@ -10,14 +11,17 @@ class SecurityProvider with ChangeNotifier {
   bool _isAutoLockEnabled = true;
   int _clearClipboardSeconds = 30; 
   bool _isBlockScreenshotsEnabled = true;
+  bool _isPrivacyModeEnabled = false;
   
   bool _isAuthenticated = false;
   Timer? _lockTimer;
+  DateTime? _lastPausedTime;
 
   bool get isAppLockEnabled => _isAppLockEnabled;
   bool get isAutoLockEnabled => _isAutoLockEnabled;
   int get clearClipboardSeconds => _clearClipboardSeconds;
   bool get isBlockScreenshotsEnabled => _isBlockScreenshotsEnabled;
+  bool get isPrivacyModeEnabled => _isPrivacyModeEnabled;
   bool get isAuthenticated => _isAuthenticated;
 
   SecurityProvider() {
@@ -27,6 +31,7 @@ class SecurityProvider with ChangeNotifier {
   Future<void> _loadSecuritySettings() async {
     _isAppLockEnabled = (await _storage.read("app_lock_enabled")) == "true";
     _isAutoLockEnabled = (await _storage.read("auto_lock_enabled")) != "false";
+    _isPrivacyModeEnabled = (await _storage.read("privacy_mode_enabled")) == "true";
     
     final clipDur = await _storage.read("clear_clipboard_seconds");
     if (clipDur != null) {
@@ -35,8 +40,13 @@ class SecurityProvider with ChangeNotifier {
     
     _isBlockScreenshotsEnabled = (await _storage.read("block_screenshots_enabled")) != "false";
 
-    // Set initial auth state
     _isAuthenticated = !_isAppLockEnabled;
+    notifyListeners();
+  }
+
+  Future<void> togglePrivacyMode(bool value) async {
+    _isPrivacyModeEnabled = value;
+    await _storage.write("privacy_mode_enabled", value.toString());
     notifyListeners();
   }
 
@@ -45,7 +55,6 @@ class SecurityProvider with ChangeNotifier {
     await _storage.write("app_lock_enabled", value.toString());
     if (!value) {
       _isAuthenticated = true;
-      _lockTimer?.cancel();
     } else {
       _isAuthenticated = false;
     }
@@ -70,45 +79,57 @@ class SecurityProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void handleAppPaused() {
+    _lastPausedTime = DateTime.now();
+  }
+
+  void handleAppResumed() {
+    if (!_isAppLockEnabled || !_isAutoLockEnabled) return;
+    
+    if (_lastPausedTime != null) {
+      final difference = DateTime.now().difference(_lastPausedTime!);
+      // Only lock if the app was in the background for more than 30 seconds
+      // This prevents annoying biometric prompts during quick app switches
+      if (difference.inSeconds > 30) {
+        _isAuthenticated = false;
+        notifyListeners();
+      }
+    }
+    _lastPausedTime = null;
+  }
+
   Future<bool> requestAuthentication() async {
+    if (!_isAppLockEnabled) return true;
+    
     final success = await AuthService.authenticate();
     if (success) {
       _isAuthenticated = true;
-      _lockTimer?.cancel();
       notifyListeners();
+      
+      // Attempt weekly automatic backup upon successful authentication
+      // We use a default backup password for automatic backups
+      _triggerAutoBackup();
     }
     return success;
+  }
+
+  Future<void> _triggerAutoBackup() async {
+    try {
+      // In a real app, you might use a derived key from the user's PIN/biometric context
+      // For now, we use a consistent internal password for automatic encrypted backups
+      await BackupService.checkAndRunWeeklyBackup("persona_internal_auto_backup_key");
+    } catch (e) {
+      debugPrint("Automatic backup failed: $e");
+    }
   }
 
   Future<void> authenticate() async {
     if (!_isAppLockEnabled) {
       _isAuthenticated = true;
       notifyListeners();
+      _triggerAutoBackup();
       return;
     }
     await requestAuthentication();
-  }
-
-  void startLockTimer() {
-    // If App Lock is on and Auto Lock is on, we should lock when backgrounded
-    if (!_isAppLockEnabled || !_isAutoLockEnabled) return;
-    
-    // We lock after a short delay to allow quick app switching
-    _lockTimer?.cancel();
-    _lockTimer = Timer(const Duration(seconds: 5), () {
-      _isAuthenticated = false;
-      notifyListeners();
-    });
-  }
-
-  void cancelLockTimer() {
-    _lockTimer?.cancel();
-  }
-
-  void lockImmediate() {
-    if (!_isAppLockEnabled) return;
-    _isAuthenticated = false;
-    _lockTimer?.cancel();
-    notifyListeners();
   }
 }

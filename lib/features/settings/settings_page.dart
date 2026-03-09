@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme_provider.dart';
 import '../../core/security_provider.dart';
+import '../../core/dev_provider.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -10,6 +11,7 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final securityProvider = Provider.of<SecurityProvider>(context);
+    final devProvider = Provider.of<DevProvider>(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text("Settings")),
@@ -39,12 +41,6 @@ class SettingsPage extends StatelessWidget {
               final success = await securityProvider.requestAuthentication();
               if (success) {
                 await securityProvider.toggleAppLock(value);
-              } else {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Authentication required to change this setting")),
-                  );
-                }
               }
             },
           ),
@@ -66,13 +62,38 @@ class SettingsPage extends StatelessWidget {
             subtitle: const Text("Prevent screenshots and hide preview"),
             secondary: const Icon(Icons.screenshot_rounded),
             value: securityProvider.isBlockScreenshotsEnabled,
-            onChanged: (bool value) {
-              securityProvider.toggleBlockScreenshots(value);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Screenshot protection updated")),
-              );
-            },
+            onChanged: (bool value) => securityProvider.toggleBlockScreenshots(value),
           ),
+          
+          // --- DEVELOPMENT GROUP ---
+          if (devProvider.isDevMenuVisible) ...[
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text("Development", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+            ),
+            SwitchListTile(
+              title: const Text("Show Error Alerts"),
+              subtitle: const Text("Display exception details in a dialog"),
+              secondary: const Icon(Icons.bug_report_outlined),
+              value: devProvider.showErrorAlerts,
+              onChanged: (bool value) => devProvider.toggleShowErrors(value),
+            ),
+            ListTile(
+              title: const Text("Reset Onboarding"),
+              subtitle: const Text("Show intro slides on next restart"),
+              leading: const Icon(Icons.refresh_rounded),
+              onTap: () async {
+                await devProvider.resetOnboarding();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Onboarding reset. Restart app to see.")),
+                  );
+                }
+              },
+            ),
+          ],
+
           const Divider(),
           const Padding(
             padding: EdgeInsets.all(16.0),

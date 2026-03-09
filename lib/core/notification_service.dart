@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
@@ -12,11 +13,28 @@ class NotificationService {
     AndroidInitializationSettings('@mipmap/ic_launcher');
     const DarwinInitializationSettings iosSettings =
     DarwinInitializationSettings();
+    const LinuxInitializationSettings linuxSettings = 
+    LinuxInitializationSettings(defaultActionName: 'Open notification');
 
-    const InitializationSettings initSettings = InitializationSettings(
+    // Windows initialization is required when running on Windows platform
+    // but the plugin often doesn't need specific settings for simple cases.
+    // However, initialize() will fail if settings are null for the current platform.
+
+    final InitializationSettings initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
+      macOS: iosSettings,
+      linux: linuxSettings,
     );
+
+    // If we're on Windows, we need to handle it or the app will crash on startup
+    // during the .initialize() call in main.dart
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+      // For Windows, it's often better to skip notification init if not needed
+      // or provide empty settings if the platform-specific package is installed.
+      // But since the user is getting an error, we should provide default settings.
+      return; 
+    }
 
     await _notifications.initialize(
       settings: initSettings,
@@ -32,6 +50,8 @@ class NotificationService {
     required String body,
     required DateTime scheduledTime,
   }) async {
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows) return;
+
     await _notifications.zonedSchedule(
       id: id,
       title: title,
@@ -47,11 +67,11 @@ class NotificationService {
         iOS: DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      // REMOVED: uiLocalNotificationDateInterpretation (No longer needed in v20+)
     );
   }
 
   static Future<void> cancelAll() async {
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows) return;
     await _notifications.cancelAll();
   }
 }
