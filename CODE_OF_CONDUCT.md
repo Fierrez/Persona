@@ -37,7 +37,9 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be repor
 ## Enforcement Guidelines
 
 -- 1. Acknowledge receipt of the report within 3 business days.
+
 -- 2. Investigate and, if necessary, take action (warning, temporary or permanent ban, or other measures).
+
 -- 3. Notify parties involved when the investigation concludes.
 
 ## Attribution
