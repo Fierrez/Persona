@@ -70,36 +70,70 @@ class _RecoveryCodesPageState extends State<RecoveryCodesPage> {
     final nameController = TextEditingController();
     
     if (mounted) {
-      final confirm = await showDialog<bool>(
+      final confirm = await showModalBottomSheet<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text("Import ${rawCodes.length} Codes"),
-          content: TextField(
-            controller: nameController,
-            decoration: const InputDecoration(
-              labelText: "Service Name (e.g. GitHub)",
-              hintText: "Enter service name",
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Text("Import ${rawCodes.length} Codes", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: "Service Name (e.g. GitHub)",
+                    hintText: "Enter service name",
+                    filled: true,
+                    fillColor: Theme.of(context).cardTheme.color,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (nameController.text.isNotEmpty) {
+                        Navigator.pop(context, true);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2D62ED),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: const Text("Import Now", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
             ),
           ),
-          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false), 
-              child: const Text("Cancel")
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (nameController.text.isNotEmpty) {
-                  Navigator.pop(context, true);
-                }
-              }, 
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text("Import")
-            ),
-          ],
         ),
       );
 
@@ -127,47 +161,75 @@ class _RecoveryCodesPageState extends State<RecoveryCodesPage> {
 
   Future<void> _showPasteDialog() async {
     final pasteController = TextEditingController();
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Paste Recovery Codes"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Paste multiple codes separated by spaces or new lines.", style: TextStyle(fontSize: 14, color: Colors.grey)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: pasteController,
-              maxLines: 8,
-              decoration: InputDecoration(
-                hintText: "Paste codes here...",
-                filled: true,
-                fillColor: Colors.grey.withOpacity(0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide.none,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-          ElevatedButton(
-            onPressed: () {
-              final content = pasteController.text;
-              Navigator.pop(context);
-              _processBulkCodes(content);
-            },
-            style: ElevatedButton.styleFrom(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text("Next"),
+              const Text("Paste Recovery Codes", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text("Paste multiple codes separated by spaces or new lines.", style: TextStyle(fontSize: 14, color: Colors.grey)),
+              const SizedBox(height: 24),
+              TextField(
+                controller: pasteController,
+                maxLines: 6,
+                decoration: InputDecoration(
+                  hintText: "Paste codes here...",
+                  filled: true,
+                  fillColor: Theme.of(context).cardTheme.color,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final content = pasteController.text;
+                    Navigator.pop(context);
+                    _processBulkCodes(content);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2D62ED),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  child: const Text("Continue", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -201,27 +263,27 @@ class _RecoveryCodesPageState extends State<RecoveryCodesPage> {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red),
-            SizedBox(width: 8),
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+            SizedBox(width: 12),
             Text("Security Warning"),
           ],
         ),
         content: const Text(
-          "You are about to export your recovery codes to an unencrypted CSV file.\n\n"
-          "Anyone with access to this file can read your codes. "
-          "Are you sure you want to continue?",
+          "Exporting your recovery codes to a CSV file is unsafe. "
+          "Anyone with access to the file can read them. Do you wish to proceed?",
+          style: TextStyle(height: 1.5),
         ),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red, 
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              backgroundColor: Colors.red.shade100, 
+              foregroundColor: Colors.red.shade800,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text("Export Unsafe"),
@@ -261,36 +323,75 @@ class _RecoveryCodesPageState extends State<RecoveryCodesPage> {
   }
 
   void _showAddDialog() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Add Recovery Code"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _serviceController,
-              decoration: const InputDecoration(labelText: "Service Name (e.g. GitHub)"),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _codeController,
-              decoration: const InputDecoration(labelText: "Recovery Code"),
-            ),
-          ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         ),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-          ElevatedButton(
-            onPressed: _addCode, 
-            style: ElevatedButton.styleFrom(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text("Add")
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const Text("Add Recovery Code", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 24),
+              TextField(
+                controller: _serviceController,
+                decoration: InputDecoration(
+                  labelText: "Service Name (e.g. GitHub)",
+                  filled: true,
+                  fillColor: Theme.of(context).cardTheme.color,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _codeController,
+                decoration: InputDecoration(
+                  labelText: "Recovery Code",
+                  filled: true,
+                  fillColor: Theme.of(context).cardTheme.color,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: _addCode, 
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2D62ED),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  child: const Text("Save Code", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -300,6 +401,7 @@ class _RecoveryCodesPageState extends State<RecoveryCodesPage> {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      resizeToAvoidBottomInset: false,
       body: _codes.isEmpty 
         ? Center(
             child: Column(
@@ -313,6 +415,7 @@ class _RecoveryCodesPageState extends State<RecoveryCodesPage> {
           )
         : ListView.builder(
             padding: const EdgeInsets.only(bottom: 120),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             itemCount: _codes.length,
             itemBuilder: (context, index) {
               final code = _codes[index];

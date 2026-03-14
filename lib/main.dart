@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:animations/animations.dart';
 import 'package:persona_app/shared/themes.dart';
 import 'package:persona_app/core/theme_provider.dart';
 import 'package:persona_app/core/security_provider.dart';
@@ -45,11 +44,8 @@ class AppLoader extends StatelessWidget {
       future: SecureStorageService().read('has_seen_onboarding'),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            color: Colors.white,
-            child: const Center(
-              child: CircularProgressIndicator(color: Color(0xFF2D62ED)),
-            ),
+          return const Material(
+            child: Center(child: CircularProgressIndicator(color: Color(0xFF2D62ED))),
           );
         }
         return PersonaApp(showOnboarding: snapshot.data != 'true');
@@ -125,184 +121,64 @@ class MainNavigationWrapper extends StatefulWidget {
 class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
   int _currentIndex = 2;
 
-  final List<Widget> _pages = [
-    const AuthenticatorPage(),
-    const VaultPage(),
-    const DashboardPage(),
-    const PlannerPage(),
-    const ProfilePage(),
-  ];
-
-  final List<Color> _navColors = [
-    const Color(0xFFFB4B93), // Authenticator
-    const Color(0xFF2D62ED), // Vault
-    const Color(0xFF2D62ED), // Home
-    const Color(0xFF00D27F), // Planner
-    const Color(0xFFA066FF), // Profile
+  // Use IndexedStack to keep tabs alive and eliminate transition lag
+  final List<Widget> _pages = const [
+    AuthenticatorPage(),
+    VaultPage(),
+    DashboardPage(),
+    PlannerPage(),
+    ProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final currentColor = _navColors[_currentIndex];
-    final bool isHomeActive = _currentIndex == 2;
     
     return Scaffold(
-      extendBody: true, 
-      body: PageTransitionSwitcher(
-        duration: const Duration(milliseconds: 400),
-        transitionBuilder: (child, primaryAnimation, secondaryAnimation) {
-          return FadeThroughTransition(
-            animation: primaryAnimation,
-            secondaryAnimation: secondaryAnimation,
-            child: child,
-          );
-        },
-        child: _pages[_currentIndex],
+      extendBody: true,
+      resizeToAvoidBottomInset: false, // Prevents keyboard from triggering full app relayout
+      body: RepaintBoundary(
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _pages,
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        transform: Matrix4.translationValues(0, isHomeActive ? -10 : 0, 0),
-        child: FloatingActionButton(
-          heroTag: "home_fab", // Added unique heroTag
-          onPressed: () => setState(() => _currentIndex = 2),
-          backgroundColor: isHomeActive ? currentColor : Colors.grey.shade300,
-          elevation: isHomeActive ? 12 : 4,
-          shape: const CircleBorder(),
-          child: Icon(
-            Icons.home_rounded, 
-            color: isHomeActive ? Colors.white : Colors.grey.shade600, 
-            size: 28
-          ),
+      floatingActionButton: FloatingActionButton(
+        heroTag: "home_fab",
+        onPressed: () => setState(() => _currentIndex = 2),
+        backgroundColor: _currentIndex == 2 ? const Color(0xFF2D62ED) : Colors.grey.shade300,
+        elevation: 4,
+        shape: const CircleBorder(),
+        child: Icon(
+          Icons.home_rounded, 
+          color: _currentIndex == 2 ? Colors.white : Colors.grey.shade600,
         ),
       ),
-      bottomNavigationBar: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: isHomeActive ? Colors.black.withOpacity(0.1) : currentColor.withOpacity(0.2),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8.0,
+        color: theme.cardTheme.color,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(Icons.token_rounded, 0),
+            _buildNavItem(Icons.lock_rounded, 1),
+            const SizedBox(width: 40),
+            _buildNavItem(Icons.calendar_today_rounded, 3),
+            _buildNavItem(Icons.person_rounded, 4),
           ],
-        ),
-        child: BottomAppBar(
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 10.0,
-          color: theme.cardTheme.color ?? Colors.white,
-          elevation: 0,
-          child: SizedBox(
-            height: 60,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(
-                  icon: Icons.token_outlined, 
-                  activeIcon: Icons.token_rounded, 
-                  index: 0, 
-                  current: _currentIndex, 
-                  activeColor: _navColors[0],
-                  onTap: (i) => setState(() => _currentIndex = i)
-                ),
-                _NavItem(
-                  icon: Icons.lock_outline_rounded, 
-                  activeIcon: Icons.lock_rounded, 
-                  index: 1, 
-                  current: _currentIndex, 
-                  activeColor: _navColors[1],
-                  onTap: (i) => setState(() => _currentIndex = i)
-                ),
-                const SizedBox(width: 48), // Space for FAB
-                _NavItem(
-                  icon: Icons.calendar_today_outlined, 
-                  activeIcon: Icons.calendar_today_rounded, 
-                  index: 3, 
-                  current: _currentIndex, 
-                  activeColor: _navColors[3],
-                  onTap: (i) => setState(() => _currentIndex = i)
-                ),
-                _NavItem(
-                  icon: Icons.person_outline_rounded, 
-                  activeIcon: Icons.person_rounded, 
-                  index: 4, 
-                  current: _currentIndex, 
-                  activeColor: _navColors[4],
-                  onTap: (i) => setState(() => _currentIndex = i)
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
   }
-}
 
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final IconData activeIcon;
-  final int index;
-  final int current;
-  final Color activeColor;
-  final Function(int) onTap;
-
-  const _NavItem({
-    required this.icon, 
-    required this.activeIcon, 
-    required this.index, 
-    required this.current, 
-    required this.activeColor,
-    required this.onTap
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isSelected = index == current;
-    
-    return Expanded(
-      child: InkWell(
-        onTap: () => onTap(index),
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutBack,
-          padding: EdgeInsets.zero, 
-          transform: Matrix4.translationValues(0, isSelected ? -12 : 0, 0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                padding: EdgeInsets.all(isSelected ? 4 : 0), 
-                decoration: BoxDecoration(
-                  color: isSelected ? activeColor.withOpacity(0.1) : Colors.transparent,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isSelected ? activeIcon : icon,
-                  color: isSelected ? activeColor : Colors.grey.shade400,
-                  size: isSelected ? 24 : 22, 
-                ),
-              ),
-              if (isSelected)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.only(top: 2),
-                  width: 3,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: activeColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
+  Widget _buildNavItem(IconData icon, int index) {
+    final isSelected = _currentIndex == index;
+    return IconButton(
+      icon: Icon(icon),
+      color: isSelected ? const Color(0xFF2D62ED) : Colors.grey.shade400,
+      onPressed: () => setState(() => _currentIndex = index),
     );
   }
 }

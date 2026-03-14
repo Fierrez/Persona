@@ -41,42 +41,81 @@ class ProfilePage extends StatelessWidget {
     final nameController = TextEditingController(text: provider.name);
     final bioController = TextEditingController(text: provider.bio);
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Edit Profile"),
-        content: Column(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          left: 24,
+          right: 24,
+          top: 24,
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const Text("Edit Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: "Display Name",
-                hintText: "Enter your name",
+                prefixIcon: const Icon(Icons.person_outline_rounded),
+                filled: true,
+                fillColor: Theme.of(context).cardTheme.color,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
               ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: bioController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: "Bio",
-                hintText: "A short bio about you",
+                prefixIcon: const Icon(Icons.info_outline_rounded),
+                filled: true,
+                fillColor: Theme.of(context).cardTheme.color,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (nameController.text.isNotEmpty) {
+                    provider.updateProfile(nameController.text, bioController.text);
+                    Navigator.pop(context);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  elevation: 0,
+                ),
+                child: const Text("Save Changes", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-          ElevatedButton(
-            onPressed: () {
-              if (nameController.text.isNotEmpty) {
-                provider.updateProfile(nameController.text, bioController.text);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text("Save Changes"),
-          ),
-        ],
       ),
     );
   }
@@ -85,22 +124,24 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer4<ThemeProvider, SecurityProvider, ProfileProvider, VaultProvider>(
       builder: (context, themeProvider, securityProvider, profileProvider, vaultProvider, child) {
+        final theme = Theme.of(context);
         return Scaffold(
           body: CustomScrollView(
             slivers: [
               SliverAppBar(
-                expandedHeight: 260,
+                expandedHeight: 280,
                 pinned: true,
                 stretch: true,
+                backgroundColor: theme.colorScheme.primary,
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                         colors: [
-                          Theme.of(context).colorScheme.primary,
-                          Theme.of(context).colorScheme.secondary,
+                          theme.colorScheme.primary,
+                          theme.colorScheme.primary.withBlue(200),
                         ],
                       ),
                     ),
@@ -117,17 +158,17 @@ class ProfilePage extends StatelessWidget {
                                   shape: BoxShape.circle,
                                   border: Border.all(color: Colors.white, width: 4),
                                   boxShadow: [
-                                    BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10)
+                                    BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, spreadRadius: 2)
                                   ],
                                 ),
                                 child: CircleAvatar(
-                                  radius: 55,
+                                  radius: 60,
                                   backgroundColor: Colors.white24,
                                   backgroundImage: profileProvider.imagePath != null
                                       ? FileImage(File(profileProvider.imagePath!))
                                       : null,
                                   child: profileProvider.imagePath == null
-                                      ? const Icon(Icons.person, size: 65, color: Colors.white)
+                                      ? const Icon(Icons.person_rounded, size: 70, color: Colors.white)
                                       : null,
                                 ),
                               ),
@@ -135,13 +176,13 @@ class ProfilePage extends StatelessWidget {
                                 bottom: 0,
                                 right: 4,
                                 child: Container(
-                                  padding: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.shade700,
+                                    color: Colors.white,
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
+                                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
                                   ),
-                                  child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                                  child: Icon(Icons.camera_alt_rounded, size: 18, color: theme.colorScheme.primary),
                                 ),
                               ),
                             ],
@@ -152,14 +193,15 @@ class ProfilePage extends StatelessWidget {
                           profileProvider.name,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 24,
+                            fontSize: 26,
                             fontWeight: FontWeight.bold,
-                            shadows: [Shadow(color: Colors.black26, blurRadius: 4)],
+                            shadows: [Shadow(color: Colors.black26, blurRadius: 8)],
                           ),
                         ),
+                        const SizedBox(height: 4),
                         Text(
                           profileProvider.bio,
-                          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
+                          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14, fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -168,25 +210,30 @@ class ProfilePage extends StatelessWidget {
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionHeader("ACCOUNT"),
+                      _buildSectionHeader("ACCOUNT SETTINGS"),
                       _buildProfileTile(
+                        context,
                         icon: Icons.edit_rounded,
-                        title: "Edit Name & Bio",
-                        subtitle: "Customize your persona's identity",
+                        title: "Edit Profile",
+                        subtitle: "Update your name and bio",
+                        color: Colors.orange,
                         onTap: () => _showEditProfileDialog(context, profileProvider),
                       ),
                       const SizedBox(height: 24),
-                      _buildSectionHeader("SECURITY"),
+                      _buildSectionHeader("SECURITY & PRIVACY"),
                       _buildProfileTile(
-                        icon: Icons.security_rounded,
-                        title: "App Lock",
-                        subtitle: "Manage device authentication",
+                        context,
+                        icon: Icons.fingerprint_rounded,
+                        title: "Biometric Lock",
+                        subtitle: "Secure app access",
+                        color: Colors.blue,
                         trailing: Switch(
                           value: securityProvider.isAppLockEnabled,
+                          activeColor: theme.colorScheme.primary,
                           onChanged: (val) async {
                             final success = await securityProvider.requestAuthentication();
                             if (success) {
@@ -196,9 +243,11 @@ class ProfilePage extends StatelessWidget {
                         ),
                       ),
                       _buildProfileTile(
-                        icon: Icons.backup_rounded,
+                        context,
+                        icon: Icons.cloud_upload_rounded,
                         title: "Backup & Export",
-                        subtitle: "Secure your data offline",
+                        subtitle: "Keep your data safe offline",
+                        color: Colors.green,
                         onTap: () {
                           Navigator.push(context, MaterialPageRoute(builder: (context) => const BackupPage()));
                         },
@@ -206,25 +255,39 @@ class ProfilePage extends StatelessWidget {
                       const SizedBox(height: 24),
                       _buildSectionHeader("PREFERENCES"),
                       _buildProfileTile(
-                        icon: Icons.palette_outlined,
+                        context,
+                        icon: Icons.dark_mode_rounded,
                         title: "Theme Mode",
-                        subtitle: "Current: ${themeProvider.themeMode.toString().split('.').last}",
+                        subtitle: "Current: ${themeProvider.themeMode.toString().split('.').last.toUpperCase()}",
+                        color: Colors.purple,
                         onTap: () => _showThemeDialog(context, themeProvider),
                       ),
                       _buildProfileTile(
-                        icon: Icons.settings_outlined,
-                        title: "Advanced Settings",
+                        context,
+                        icon: Icons.settings_rounded,
+                        title: "General Settings",
+                        color: Colors.blueGrey,
                         onTap: () {
                           Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsPage()));
                         },
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
                       _buildSectionHeader("DANGER ZONE"),
-                      _buildProfileTile(
-                        icon: Icons.delete_forever_rounded,
-                        title: "Wipe All App Data",
-                        textColor: Colors.red,
-                        onTap: () => _showDeleteDataConfirm(context),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.red.withOpacity(0.1)),
+                        ),
+                        child: _buildProfileTile(
+                          context,
+                          icon: Icons.delete_forever_rounded,
+                          title: "Wipe All Data",
+                          subtitle: "Permanently delete everything",
+                          color: Colors.red,
+                          textColor: Colors.red,
+                          onTap: () => _showDeleteDataConfirm(context),
+                        ),
                       ),
                       const SizedBox(height: 120),
                     ],
@@ -240,72 +303,100 @@ class ProfilePage extends StatelessWidget {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 12),
+      padding: const EdgeInsets.only(left: 8, bottom: 12),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2),
+        style: TextStyle(
+          fontSize: 12, 
+          fontWeight: FontWeight.bold, 
+          color: Colors.grey.shade600, 
+          letterSpacing: 1.5,
+        ),
       ),
     );
   }
 
-  Widget _buildProfileTile({
+  Widget _buildProfileTile(
+    BuildContext context, {
     required IconData icon,
     required String title,
     String? subtitle,
+    required Color color,
     Widget? trailing,
     VoidCallback? onTap,
     Color? textColor,
   }) {
+    final theme = Theme.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      color: theme.cardTheme.color,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.05)),
+      ),
       child: ListTile(
-        leading: Icon(icon, color: textColor ?? Colors.blue),
-        title: Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
-        subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
-        trailing: trailing ?? const Icon(Icons.chevron_right_rounded, size: 20, color: Colors.grey),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: color, size: 22),
+        ),
+        title: Text(title, style: TextStyle(color: textColor ?? theme.colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16)),
+        subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)) : null,
+        trailing: trailing ?? Icon(Icons.chevron_right_rounded, size: 24, color: Colors.grey.shade400),
         onTap: onTap,
       ),
     );
   }
 
   void _showThemeDialog(BuildContext context, ThemeProvider provider) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Select Theme"),
-        content: Column(
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            RadioListTile<ThemeMode>(
-              title: const Text("System Default"),
-              value: ThemeMode.system,
-              groupValue: provider.themeMode,
-              onChanged: (val) {
-                if (val != null) provider.setThemeMode(val);
-                Navigator.pop(context);
-              },
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            RadioListTile<ThemeMode>(
-              title: const Text("Light Mode"),
-              value: ThemeMode.light,
-              groupValue: provider.themeMode,
-              onChanged: (val) {
-                if (val != null) provider.setThemeMode(val);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<ThemeMode>(
-              title: const Text("Dark Mode"),
-              value: ThemeMode.dark,
-              groupValue: provider.themeMode,
-              onChanged: (val) {
-                if (val != null) provider.setThemeMode(val);
-                Navigator.pop(context);
-              },
-            ),
+            const Text("Select Theme", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            _buildThemeOption(context, "System Default", Icons.brightness_auto_rounded, ThemeMode.system, provider),
+            _buildThemeOption(context, "Light Mode", Icons.light_mode_rounded, ThemeMode.light, provider),
+            _buildThemeOption(context, "Dark Mode", Icons.dark_mode_rounded, ThemeMode.dark, provider),
+            const SizedBox(height: 16),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildThemeOption(BuildContext context, String title, IconData icon, ThemeMode mode, ThemeProvider provider) {
+    final isSelected = provider.themeMode == mode;
+    return ListTile(
+      leading: Icon(icon, color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey),
+      title: Text(title, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+      trailing: isSelected ? Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.primary) : null,
+      onTap: () {
+        provider.setThemeMode(mode);
+        Navigator.pop(context);
+      },
     );
   }
 
@@ -313,23 +404,27 @@ class ProfilePage extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text("Clear All Data?"),
-        content: const Text("This will permanently delete all your tasks, passwords, and 2FA keys. This action cannot be undone."),
+        content: const Text(
+          "This will permanently delete all your tasks, passwords, and 2FA keys. This action cannot be undone.",
+          style: TextStyle(height: 1.5),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade100, 
+              foregroundColor: Colors.red.shade800,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
             onPressed: () async {
               await SecureStorageService().clearAll();
-              
-              // Reset all providers
               Provider.of<VaultProvider>(context, listen: false).reset();
               Provider.of<PlannerProvider>(context, listen: false).reset();
               Provider.of<ProfileProvider>(context, listen: false).reset();
-
-              // Reset the GlobalKey for ScaffoldMessenger
               ErrorHandler.resetKey();
-
               if (context.mounted) {
                 Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const AppLoader()),

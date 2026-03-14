@@ -16,7 +16,7 @@ class EncryptionService {
     String? storedKey = await _storage.read('encryption_key');
     String? storedIv = await _storage.read('encryption_iv');
 
-    if (storedKey == null || storedIv == null) {
+    if (storedKey == null || storedIv == null || storedKey == 'null') {
       final key = Key.fromSecureRandom(32);
       final iv = IV.fromSecureRandom(16);
       await _storage.write('encryption_key', key.base64);
@@ -24,9 +24,27 @@ class EncryptionService {
       _key = key;
       _iv = iv;
     } else {
-      _key = Key.fromBase64(storedKey);
-      _iv = IV.fromBase64(storedIv);
+      try {
+        _key = Key.fromBase64(_sanitize(storedKey));
+        _iv = IV.fromBase64(_sanitize(storedIv));
+      } catch (e) {
+        // Fallback: if keys are corrupted, generate new ones
+        final key = Key.fromSecureRandom(32);
+        final iv = IV.fromSecureRandom(16);
+        await _storage.write('encryption_key', key.base64);
+        await _storage.write('encryption_iv', iv.base64);
+        _key = key;
+        _iv = iv;
+      }
     }
+  }
+
+  String _sanitize(String value) {
+    String sanitized = value.trim();
+    if (sanitized.startsWith('"') && sanitized.endsWith('"') && sanitized.length >= 2) {
+      sanitized = sanitized.substring(1, sanitized.length - 1);
+    }
+    return sanitized;
   }
 
   String encrypt(String text) {
@@ -41,11 +59,10 @@ class EncryptionService {
       final encrypter = Encrypter(AES(_key!));
       return encrypter.decrypt64(encryptedText, iv: _iv);
     } catch (e) {
-      return encryptedText; // Return original if decryption fails (e.g. migration)
+      return encryptedText; 
     }
   }
 
-  // Helper for hashing (e.g. for master password check)
   String hash(String text) {
     return sha256.convert(utf8.encode(text)).toString();
   }

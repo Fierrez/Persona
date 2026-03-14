@@ -35,16 +35,47 @@ class _QRScannerPageState extends State<QRScannerPage> with SingleTickerProvider
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Scan QR Code', style: TextStyle(color: Colors.white)),
+        title: const Text('Scan QR Code', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          ValueListenableBuilder(
+            valueListenable: controller,
+            builder: (context, state, child) {
+              final torchState = state.torchState;
+              IconData icon;
+              Color color;
+              
+              switch (torchState) {
+                case TorchState.on:
+                  icon = Icons.flash_on_rounded;
+                  color = Colors.yellow;
+                  break;
+                case TorchState.off:
+                default:
+                  icon = Icons.flash_off_rounded;
+                  color = Colors.white;
+                  break;
+              }
+              
+              return IconButton(
+                icon: Icon(icon, color: color),
+                onPressed: () => controller.toggleTorch(),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.flip_camera_ios_rounded, color: Colors.white),
+            onPressed: () => controller.switchCamera(),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
-      extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // Pinch to Zoom + Scanner
           GestureDetector(
             onScaleStart: (details) {
               _baseZoomFactor = _zoomFactor;
@@ -72,73 +103,61 @@ class _QRScannerPageState extends State<QRScannerPage> with SingleTickerProvider
               },
             ),
           ),
-          // Custom Scanner Overlay
           _buildScannerOverlay(context),
           
-          // Zoom Slider (Scalable UI)
           Positioned(
-            bottom: 140,
-            left: 50,
-            right: 50,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.4),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.zoom_out, color: Colors.white, size: 18),
-                  Expanded(
-                    child: Slider(
-                      value: _zoomFactor,
-                      min: 0.0,
-                      max: 1.0,
-                      activeColor: Colors.blue,
-                      inactiveColor: Colors.white30,
-                      onChanged: (value) {
-                        setState(() {
-                          _zoomFactor = value;
-                          controller.setZoomScale(value);
-                        });
-                      },
-                    ),
-                  ),
-                  const Icon(Icons.zoom_in, color: Colors.white, size: 18),
-                ],
-              ),
-            ),
-          ),
-
-          // Bottom Controls
-          Positioned(
-            bottom: 60,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            bottom: 100,
+            left: 40,
+            right: 40,
+            child: Column(
               children: [
-                _buildCircleButton(
-                  icon: const Icon(Icons.flash_on, color: Colors.white),
-                  onPressed: () => controller.toggleTorch(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(138),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.white.withAlpha(30)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.zoom_out_rounded, color: Colors.white70, size: 20),
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: Colors.blueAccent,
+                            inactiveTrackColor: Colors.white.withAlpha(60),
+                            thumbColor: Colors.white,
+                            overlayColor: Colors.blueAccent.withAlpha(50),
+                            trackHeight: 4,
+                          ),
+                          child: Slider(
+                            value: _zoomFactor,
+                            min: 0.0,
+                            max: 1.0,
+                            onChanged: (value) {
+                              setState(() {
+                                _zoomFactor = value;
+                                controller.setZoomScale(value);
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                      const Icon(Icons.zoom_in_rounded, color: Colors.white70, size: 20),
+                    ],
+                  ),
                 ),
-                _buildCircleButton(
-                  icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
-                  onPressed: () => controller.switchCamera(),
+                const SizedBox(height: 24),
+                const Text(
+                  "Align QR code within the frame",
+                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.5),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  "Pinch to zoom or use the slider",
+                  style: TextStyle(color: Colors.white60, fontSize: 12),
                 ),
               ],
-            ),
-          ),
-          // Help Text
-          const Positioned(
-            top: 150,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Text(
-                "Pinch to zoom or use the slider",
-                style: TextStyle(color: Colors.white70, fontSize: 14),
-              ),
             ),
           ),
         ],
@@ -152,11 +171,11 @@ class _QRScannerPageState extends State<QRScannerPage> with SingleTickerProvider
         Container(
           decoration: const ShapeDecoration(
             shape: QrScannerOverlayShape(
-              borderColor: Colors.blue,
-              borderRadius: 20,
-              borderLength: 30,
-              borderWidth: 8,
-              cutOutSize: 250,
+              borderColor: Colors.blueAccent,
+              borderRadius: 24,
+              borderLength: 40,
+              borderWidth: 10,
+              cutOutSize: 280,
             ),
           ),
         ),
@@ -165,23 +184,27 @@ class _QRScannerPageState extends State<QRScannerPage> with SingleTickerProvider
             animation: _animationController,
             builder: (context, child) {
               return Container(
-                width: 230,
-                height: 2,
+                width: 260,
+                height: 3,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Colors.transparent, Colors.blue, Colors.transparent],
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.blueAccent.withAlpha(0),
+                      Colors.blueAccent,
+                      Colors.blueAccent.withAlpha(0),
+                    ],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.blue.withOpacity(0.5),
-                      blurRadius: 10,
+                      color: Colors.blueAccent.withAlpha(100),
+                      blurRadius: 15,
                       spreadRadius: 2,
                     )
                   ],
                 ),
                 transform: Matrix4.translationValues(
                   0,
-                  (250 * _animationController.value) - 125,
+                  (280 * _animationController.value) - 140,
                   0,
                 ),
               );
@@ -189,22 +212,6 @@ class _QRScannerPageState extends State<QRScannerPage> with SingleTickerProvider
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildCircleButton({required Widget icon, required VoidCallback onPressed}) {
-    return Container(
-      height: 60,
-      width: 60,
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white24),
-      ),
-      child: IconButton(
-        icon: icon,
-        onPressed: onPressed,
-      ),
     );
   }
 }
@@ -242,7 +249,7 @@ class QrScannerOverlayShape extends ShapeBorder {
       height: cutOutSize,
     );
 
-    final backgroundPaint = Paint()..color = Colors.black.withOpacity(0.6);
+    final backgroundPaint = Paint()..color = Colors.black.withAlpha(178);
     canvas.drawPath(
       Path.combine(
         PathOperation.difference,

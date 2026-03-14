@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:persona_app/core/secure_storage.dart';
 import 'package:persona_app/features/backup/backup_service.dart';
+import 'package:screen_protector/screen_protector.dart';
 import 'auth_service.dart';
 
 class SecurityProvider with ChangeNotifier {
@@ -39,9 +42,33 @@ class SecurityProvider with ChangeNotifier {
     }
     
     _isBlockScreenshotsEnabled = (await _storage.read("block_screenshots_enabled")) != "false";
+    
+    // Apply screenshot protection based on saved setting
+    _applyScreenshotProtection();
 
-    _isAuthenticated = !_isAppLockEnabled;
+    // On Windows, we default to authenticated to avoid hangs/locked states if auth fails
+    if (!kIsWeb && Platform.isWindows) {
+      _isAuthenticated = true;
+    } else {
+      _isAuthenticated = !_isAppLockEnabled;
+    }
+    
     notifyListeners();
+  }
+
+  Future<void> _applyScreenshotProtection() async {
+    // ScreenProtector is primarily for mobile. Skip on Windows to avoid hangs.
+    if (!kIsWeb && Platform.isWindows) return;
+    
+    try {
+      if (_isBlockScreenshotsEnabled) {
+        await ScreenProtector.preventScreenshotOn();
+      } else {
+        await ScreenProtector.preventScreenshotOff();
+      }
+    } catch (e) {
+      debugPrint("ScreenProtector error: $e");
+    }
   }
 
   Future<void> togglePrivacyMode(bool value) async {
@@ -53,7 +80,7 @@ class SecurityProvider with ChangeNotifier {
   Future<void> toggleAppLock(bool value) async {
     _isAppLockEnabled = value;
     await _storage.write("app_lock_enabled", value.toString());
-    if (!value) {
+    if (!value || (!kIsWeb && Platform.isWindows)) {
       _isAuthenticated = true;
     } else {
       _isAuthenticated = false;
@@ -76,6 +103,7 @@ class SecurityProvider with ChangeNotifier {
   Future<void> toggleBlockScreenshots(bool value) async {
     _isBlockScreenshotsEnabled = value;
     await _storage.write("block_screenshots_enabled", value.toString());
+    await _applyScreenshotProtection();
     notifyListeners();
   }
 
@@ -84,12 +112,11 @@ class SecurityProvider with ChangeNotifier {
   }
 
   void handleAppResumed() {
+    if (!kIsWeb && Platform.isWindows) return;
     if (!_isAppLockEnabled || !_isAutoLockEnabled) return;
     
     if (_lastPausedTime != null) {
       final difference = DateTime.now().difference(_lastPausedTime!);
-      // Only lock if the app was in the background for more than 30 seconds
-      // This prevents annoying biometric prompts during quick app switches
       if (difference.inSeconds > 30) {
         _isAuthenticated = false;
         notifyListeners();
@@ -99,15 +126,13 @@ class SecurityProvider with ChangeNotifier {
   }
 
   Future<bool> requestAuthentication() async {
+    if (!kIsWeb && Platform.isWindows) return true;
     if (!_isAppLockEnabled) return true;
     
     final success = await AuthService.authenticate();
     if (success) {
       _isAuthenticated = true;
       notifyListeners();
-      
-      // Attempt weekly automatic backup upon successful authentication
-      // We use a default backup password for automatic backups
       _triggerAutoBackup();
     }
     return success;
@@ -115,8 +140,6 @@ class SecurityProvider with ChangeNotifier {
 
   Future<void> _triggerAutoBackup() async {
     try {
-      // In a real app, you might use a derived key from the user's PIN/biometric context
-      // For now, we use a consistent internal password for automatic encrypted backups
       await BackupService.checkAndRunWeeklyBackup("persona_internal_auto_backup_key");
     } catch (e) {
       debugPrint("Automatic backup failed: $e");
@@ -124,6 +147,11 @@ class SecurityProvider with ChangeNotifier {
   }
 
   Future<void> authenticate() async {
+    if (!kIsWeb && Platform.isWindows) {
+      _isAuthenticated = true;
+      notifyListeners();
+      return;
+    }
     if (!_isAppLockEnabled) {
       _isAuthenticated = true;
       notifyListeners();

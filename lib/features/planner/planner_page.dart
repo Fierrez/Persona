@@ -15,6 +15,7 @@ class PlannerPage extends StatefulWidget {
 class _PlannerPageState extends State<PlannerPage> {
   final SecureStorageService _storage = SecureStorageService();
   List<Task> _tasks = [];
+  String _filterStatus = 'Pending'; 
   CalendarFormat _calendarFormat = CalendarFormat.twoWeeks;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
@@ -51,23 +52,37 @@ class _PlannerPageState extends State<PlannerPage> {
         builder: (context, setModalState) => Container(
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
           ),
           padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 50,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
             left: 24,
             right: 24,
-            top: 32,
+            top: 24,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text("New Task", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context), 
+                    icon: const Icon(Icons.close_rounded, size: 28)
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -77,6 +92,7 @@ class _PlannerPageState extends State<PlannerPage> {
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
                   hintText: "Task Title",
+                  prefixIcon: const Icon(Icons.edit_calendar_rounded),
                   filled: true,
                   fillColor: Theme.of(context).cardTheme.color,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -88,6 +104,7 @@ class _PlannerPageState extends State<PlannerPage> {
                 maxLines: 2,
                 decoration: InputDecoration(
                   hintText: "Description (Optional)",
+                  prefixIcon: const Icon(Icons.description_outlined),
                   filled: true,
                   fillColor: Theme.of(context).cardTheme.color,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -121,7 +138,7 @@ class _PlannerPageState extends State<PlannerPage> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
                         color: Theme.of(context).cardTheme.color,
                         borderRadius: BorderRadius.circular(16),
@@ -129,9 +146,19 @@ class _PlannerPageState extends State<PlannerPage> {
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: priority,
+                          isExpanded: true,
                           dropdownColor: Theme.of(context).cardTheme.color,
                           items: ['Low', 'Medium', 'High'].map((String value) {
-                            return DropdownMenuItem<String>(value: value, child: Text(value));
+                            return DropdownMenuItem<String>(
+                              value: value, 
+                              child: Row(
+                                children: [
+                                  Icon(Icons.flag_rounded, size: 18, color: _getPriorityColor(value)),
+                                  const SizedBox(width: 8),
+                                  Text(value),
+                                ],
+                              )
+                            );
                           }).toList(),
                           onChanged: (val) => setModalState(() => priority = val!),
                         ),
@@ -143,17 +170,19 @@ class _PlannerPageState extends State<PlannerPage> {
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
-                height: 54,
+                height: 56,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2D62ED),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    elevation: 0,
                   ),
                   onPressed: () {
                     if (titleController.text.isNotEmpty) {
+                      final now = DateTime.now();
                       final dueDate = DateTime(
-                        _selectedDay!.year, _selectedDay!.month, _selectedDay!.day,
+                        now.year, now.month, now.day,
                         selectedTime.hour, selectedTime.minute,
                       );
                       final newTask = Task(
@@ -181,15 +210,25 @@ class _PlannerPageState extends State<PlannerPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dayTasks = _tasks.where((task) {
-      if (task.dueDate == null) return false;
-      return isSameDay(task.dueDate, _selectedDay);
-    }).toList();
-    dayTasks.sort((a, b) => a.dueDate!.compareTo(b.dueDate!));
+    
+    List<Task> displayTasks = [];
+    if (_filterStatus == 'Recent') {
+      displayTasks = _tasks.where((t) => t.dueDate != null && t.dueDate!.isAfter(DateTime.now().subtract(const Duration(days: 1)))).toList();
+    } else if (_filterStatus == 'Pending') {
+      displayTasks = _tasks.where((t) => !t.isCompleted).toList();
+    } else {
+      displayTasks = _tasks.where((t) => t.isCompleted).toList();
+    }
+    displayTasks.sort((a, b) => (a.dueDate ?? DateTime.now()).compareTo(b.dueDate ?? DateTime.now()));
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text("Planner"), elevation: 0, backgroundColor: Colors.transparent),
+      appBar: AppBar(
+        title: const Text("Planner"), 
+        elevation: 0, 
+        backgroundColor: Colors.transparent,
+        centerTitle: true,
+      ),
       body: Column(
         children: [
           Container(
@@ -204,14 +243,24 @@ class _PlannerPageState extends State<PlannerPage> {
               lastDay: DateTime.utc(2030, 12, 31),
               focusedDay: _focusedDay,
               calendarFormat: _calendarFormat,
-              headerStyle: HeaderStyle(titleTextStyle: TextStyle(color: theme.colorScheme.onSurface)),
-              daysOfWeekStyle: DaysOfWeekStyle(weekdayStyle: TextStyle(color: theme.colorScheme.onSurface)),
+              headerStyle: HeaderStyle(
+                titleTextStyle: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
+                formatButtonVisible: false,
+                titleCentered: true,
+              ),
+              daysOfWeekStyle: DaysOfWeekStyle(
+                weekdayStyle: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600),
+                weekendStyle: TextStyle(color: Colors.redAccent.shade100),
+              ),
               selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
               calendarStyle: CalendarStyle(
                 defaultTextStyle: TextStyle(color: theme.colorScheme.onSurface),
                 weekendTextStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
-                todayDecoration: BoxDecoration(color: const Color(0xFF6391F4), shape: BoxShape.circle),
+                todayDecoration: BoxDecoration(color: const Color(0xFF6391F4).withOpacity(0.2), shape: BoxShape.circle),
+                todayTextStyle: const TextStyle(color: Color(0xFF2D62ED), fontWeight: FontWeight.bold),
                 selectedDecoration: BoxDecoration(color: const Color(0xFF2D62ED), shape: BoxShape.circle),
+                markersMaxCount: 1,
+                markerDecoration: const BoxDecoration(color: Color(0xFFFB4B93), shape: BoxShape.circle),
               ),
               onDaySelected: (selectedDay, focusedDay) {
                 setState(() {
@@ -223,30 +272,42 @@ class _PlannerPageState extends State<PlannerPage> {
               eventLoader: (day) => _tasks.where((t) => isSameDay(t.dueDate, day)).toList(),
             ),
           ),
+          const SizedBox(height: 16),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: theme.cardTheme.color,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+            ),
+            child: Row(
+              children: [
+                _buildToggleButton('Recent'),
+                _buildToggleButton('Pending'),
+                _buildToggleButton('Completed'),
+              ],
+            ),
+          ),
+          
           const Padding(
             padding: EdgeInsets.fromLTRB(24, 24, 24, 8),
             child: Row(
-              children: [Text("Daily Schedule", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))],
+              children: [
+                Text("Your Schedule", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              ],
             ),
           ),
+          
           Expanded(
-            child: dayTasks.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.event_available_rounded, size: 64, color: Colors.grey.shade300),
-                        const SizedBox(height: 16),
-                        Text("No tasks for today", style: TextStyle(color: Colors.grey.shade400, fontSize: 16)),
-                      ],
-                    ),
-                  )
+            child: displayTasks.isEmpty
+                ? _buildEmptyState()
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
-                    itemCount: dayTasks.length,
+                    itemCount: displayTasks.length,
                     itemBuilder: (context, index) {
-                      final task = dayTasks[index];
-                      final timeStr = task.dueDate != null ? DateFormat('hh:mm a').format(task.dueDate!) : '';
+                      final task = displayTasks[index];
+                      final timeStr = task.dueDate != null ? DateFormat('hh:mm a').format(task.dueDate!) : 'No time';
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -254,21 +315,17 @@ class _PlannerPageState extends State<PlannerPage> {
                           color: theme.cardTheme.color,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 10, offset: const Offset(0, 4))],
+                          border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.05)),
                         ),
                         child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          leading: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 4,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: _getPriorityColor(task.priority),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                            ],
+                          leading: Container(
+                            width: 4,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: _getPriorityColor(task.priority),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                           title: Row(
                             children: [
@@ -316,7 +373,49 @@ class _PlannerPageState extends State<PlannerPage> {
           backgroundColor: const Color(0xFF2D62ED),
           icon: const Icon(Icons.add_rounded, color: Colors.white),
           label: const Text("New Task", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
+      ),
+    );
+  }
+
+  Widget _buildToggleButton(String label) {
+    final isSelected = _filterStatus == label;
+    final theme = Theme.of(context);
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _filterStatus = label),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF2D62ED) : Colors.transparent,
+            borderRadius: BorderRadius.circular(25),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : theme.colorScheme.onSurface.withOpacity(0.6),
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.assignment_turned_in_outlined, size: 64, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text("No ${_filterStatus.toLowerCase()} tasks", style: TextStyle(color: Colors.grey.shade400, fontSize: 16)),
+        ],
       ),
     );
   }

@@ -99,7 +99,9 @@ class BackupService {
     try {
       final cleanedJson = _cleanInput(jsonString);
       final Map<String, dynamic> data = jsonDecode(cleanedJson);
-      for (var entry in data.entries) await _storage.write(entry.key, entry.value.toString());
+      for (var entry in data.entries) {
+        await _storage.write(entry.key, entry.value);
+      }
       return true;
     } catch (e) {
       return false;
@@ -120,7 +122,9 @@ class BackupService {
       final cleanedContent = _cleanInput(encryptedContent);
       final jsonString = _decryptData(cleanedContent, password);
       final Map<String, dynamic> data = jsonDecode(jsonString);
-      for (var entry in data.entries) await _storage.write(entry.key, entry.value.toString());
+      for (var entry in data.entries) {
+        await _storage.write(entry.key, entry.value);
+      }
       return true;
     } catch (e) {
       return false;

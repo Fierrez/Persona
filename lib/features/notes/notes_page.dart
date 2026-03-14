@@ -64,21 +64,33 @@ class _NotesPageState extends State<NotesPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.85,
+        height: MediaQuery.of(context).size.height * 0.9,
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: Column(
           children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.fromLTRB(24, 8, 8, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(note == null ? "New Note" : "Edit Note", 
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context), 
+                    icon: const Icon(Icons.close_rounded, size: 28)
+                  ),
                 ],
               ),
             ),
@@ -89,20 +101,23 @@ class _NotesPageState extends State<NotesPage> {
                   children: [
                     TextField(
                       controller: titleController,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       decoration: const InputDecoration(
                         hintText: "Title",
                         border: InputBorder.none,
+                        hintStyle: TextStyle(color: Colors.grey),
                       ),
                     ),
-                    const Divider(),
+                    const Divider(height: 1),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: contentController,
                       maxLines: null,
-                      style: const TextStyle(fontSize: 16),
+                      style: const TextStyle(fontSize: 16, height: 1.6),
                       decoration: const InputDecoration(
                         hintText: "Start writing... (Markdown supported)",
                         border: InputBorder.none,
+                        hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
                       ),
                     ),
                   ],
@@ -110,15 +125,16 @@ class _NotesPageState extends State<NotesPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 24),
               child: SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 56,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00D27F),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    elevation: 0,
                   ),
                   onPressed: () {
                     if (titleController.text.isNotEmpty) {
@@ -174,7 +190,8 @@ class _NotesPageState extends State<NotesPage> {
                 prefixIcon: const Icon(Icons.search_rounded),
                 filled: true,
                 fillColor: theme.cardTheme.color ?? Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20),
               ),
             ),
           ),
@@ -182,23 +199,25 @@ class _NotesPageState extends State<NotesPage> {
             child: _filteredNotes.isEmpty 
               ? _buildEmptyState()
               : ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 120),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   itemCount: _filteredNotes.length,
                   itemBuilder: (context, index) {
                     final note = _filteredNotes[index];
                     return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
                         color: theme.cardTheme.color ?? Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+                        border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.05)),
                       ),
                       child: ListTile(
                         contentPadding: const EdgeInsets.all(16),
                         title: Text(note.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(note.content, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey.shade600)),
+                          child: Text(note.content, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
                         ),
                         onTap: () => _viewNote(note),
                         trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
@@ -215,43 +234,74 @@ class _NotesPageState extends State<NotesPage> {
           heroTag: "notes_add_fab",
           onPressed: () => _showNoteEditor(),
           backgroundColor: const Color(0xFF00D27F),
-          child: const Icon(Icons.add_rounded, size: 30, color: Colors.white),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: const Icon(Icons.add_rounded, size: 32, color: Colors.white),
         ),
       ),
     );
   }
 
   void _viewNote(Note note) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => Dialog.fullscreen(
-        child: Scaffold(
-          appBar: AppBar(
-            title: Text(note.title),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.edit_rounded),
-                onPressed: () {
-                  Navigator.pop(context);
-                  _showNoteEditor(note: note);
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                onPressed: () => _confirmDelete(note),
-              ),
-            ],
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: MarkdownBody(
-              data: note.content,
-              selectable: true,
-              styleSheet: MarkdownStyleSheet(
-                p: const TextStyle(fontSize: 16, height: 1.5),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-          ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 8, 0),
+              child: Row(
+                children: [
+                  Expanded(child: Text(note.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                  IconButton(
+                    icon: const Icon(Icons.edit_note_rounded, color: Color(0xFF00D27F)),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showNoteEditor(note: note);
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                    onPressed: () => _confirmDelete(note),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context), 
+                    icon: const Icon(Icons.close_rounded)
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: MarkdownBody(
+                  data: note.content,
+                  selectable: true,
+                  styleSheet: MarkdownStyleSheet(
+                    p: const TextStyle(fontSize: 16, height: 1.6),
+                    h1: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    h2: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -261,20 +311,26 @@ class _NotesPageState extends State<NotesPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text("Delete Note"),
-        content: const Text("Are you sure you want to delete this note?"),
+        content: const Text("Are you sure you want to permanently delete this secure note?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade100, 
+              foregroundColor: Colors.red.shade800,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
             onPressed: () {
               setState(() {
                 _notes.removeWhere((n) => n.id == note.id);
                 _filteredNotes = List.from(_notes);
               });
               _saveNotes();
-              Navigator.pop(context);
-              Navigator.pop(context);
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Close view sheet
             },
             child: const Text("Delete"),
           ),

@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorageService {
-  // Use encryptedSharedPreferences for higher security on Android
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(
       encryptedSharedPreferences: true,
@@ -12,25 +11,57 @@ class SecureStorageService {
     ),
   );
 
+  String _cleanValue(String value) {
+    var result = value.trim();
+    if (result.startsWith('"') && result.endsWith('"') && result.length >= 2) {
+      result = result.substring(1, result.length - 1);
+    }
+    return result;
+  }
+
   Future<void> write(String key, dynamic value) async {
-    await _storage.write(key: key, value: jsonEncode(value));
+    try {
+      // Always store as JSON encoded string to handle types consistently
+      await _storage.write(key: key, value: jsonEncode(value));
+    } catch (e) {
+      await _storage.write(key: key, value: value.toString());
+    }
   }
 
   Future<String?> read(String key) async {
-    final data = await _storage.read(key: key);
-    if (data == null) return null;
     try {
-      return jsonDecode(data).toString();
+      final data = await _storage.read(key: key);
+      if (data == null || data == 'null' || data.isEmpty) return null;
+      
+      try {
+        final decoded = jsonDecode(data);
+        if (decoded == null) return null;
+        return _cleanValue(decoded.toString());
+      } catch (e) {
+        // If not JSON, return cleaned raw data
+        return _cleanValue(data);
+      }
     } catch (e) {
-      return data;
+      return null;
     }
   }
 
   Future<List<dynamic>> readList(String key) async {
-    final data = await _storage.read(key: key);
-    if (data == null) return [];
     try {
-      return jsonDecode(data);
+      final data = await _storage.read(key: key);
+      if (data == null || data == 'null' || data.isEmpty) return [];
+      
+      try {
+        final decoded = jsonDecode(data);
+        if (decoded is List) return decoded;
+        if (decoded is String) {
+          final innerDecoded = jsonDecode(decoded);
+          if (innerDecoded is List) return innerDecoded;
+        }
+        return [];
+      } catch (e) {
+        return [];
+      }
     } catch (e) {
       return [];
     }
@@ -45,6 +76,18 @@ class SecureStorageService {
   }
 
   Future<Map<String, String>> readAll() async {
-    return await _storage.readAll();
+    final rawData = await _storage.readAll();
+    final Map<String, String> cleanedData = {};
+    
+    rawData.forEach((key, value) {
+      try {
+        final decoded = jsonDecode(value);
+        cleanedData[key] = _cleanValue(decoded?.toString() ?? value);
+      } catch (e) {
+        cleanedData[key] = _cleanValue(value);
+      }
+    });
+    
+    return cleanedData;
   }
 }

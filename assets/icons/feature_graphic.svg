@@ -1,0 +1,35 @@
+<svg width="1024" height="500" viewBox="0 0 1024 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background Gradient -->
+    <rect width="1024" height="500" fill="url(#paint0_linear)"/>
+
+    <!-- Decorative Subtle Shapes -->
+    <circle cx="900" cy="100" r="200" fill="white" fill-opacity="0.05"/>
+    <circle cx="100" cy="400" r="150" fill="white" fill-opacity="0.05"/>
+    <path d="M-50 450L300 100L650 500" stroke="white" stroke-opacity="0.03" stroke-width="80"/>
+
+    <!-- Logo Group (Centered) -->
+    <g transform="translate(387, 80) scale(0.48)">
+        <!-- Shield Shape -->
+        <path d="M256 70C256 70 140 110 100 130C100 240 100 310 256 440C412 310 412 240 412 130C372 110 256 70 256 70Z" fill="white" fill-opacity="0.15"/>
+
+        <!-- Stylized Person / Keyhole Shape -->
+        <circle cx="256" cy="190" r="55" fill="white"/>
+        <path d="M166 360C166 300 206 260 256 260C306 260 346 300 346 360V380H166V360Z" fill="white"/>
+
+        <!-- Accent Checkmark -->
+        <path d="M330 310L355 335L410 280" stroke="#00D27F" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- App Title Text -->
+    <text x="512" y="380" text-anchor="middle" fill="white" style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 800; font-size: 72px; letter-spacing: 6px;">PERSONA</text>
+
+    <!-- Tagline -->
+    <text x="512" y="430" text-anchor="middle" fill="white" fill-opacity="0.8" style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 500; font-size: 22px; letter-spacing: 2px;">SECURITY • PRODUCTIVITY • PRIVACY</text>
+
+    <defs>
+        <linearGradient id="paint0_linear" x1="0" y1="0" x2="1024" y2="500" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#2D62ED"/>
+            <stop offset="1" stop-color="#FB4B93"/>
+        </linearGradient>
+    </defs>
+</svg>
